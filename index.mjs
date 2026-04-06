@@ -24,7 +24,7 @@ import { join, resolve } from 'path'
  * @property {SnapshotTarget[]} targets         - List of targets to capture
  * @property {string}           outDir          - Output directory path
  * @property {{ width: number, height: number }} [viewport]  - Default: 1200x630
- * @property {'png'|'webp'|'jpeg'} [format]    - Default: 'png'
+ * @property {'png'|'jpeg'} [format]             - Default: 'png' (Playwright only supports png and jpeg)
  * @property {number}           [quality]       - JPEG/WebP quality 0-100. Default: 90
  * @property {number}           [timeout]       - Global timeout per page ms. Default: 15000
  * @property {'networkidle'|'load'|'domcontentloaded'} [waitUntil] - Default: 'load'
@@ -59,6 +59,11 @@ const DEFAULTS = {
  */
 export async function snapshot(options) {
   const opts = { ...DEFAULTS, ...options }
+  const VALID_FORMATS = ['png', 'jpeg']
+  if (!VALID_FORMATS.includes(opts.format)) {
+    throw new Error(`Invalid format '${opts.format}': Playwright only supports ${VALID_FORMATS.join(', ')}`)
+  }
+
   const outDir = resolve(opts.outDir)
 
   await mkdir(outDir, { recursive: true })
