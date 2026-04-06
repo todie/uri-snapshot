@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install Playwright browsers
+        run: node_modules/.bin/playwright install chromium --with-deps
+
+      - name: Write smoke test script
+        run: |
+          cat > /tmp/smoke.mjs << 'SCRIPT'
+          import { snapshot } from '/home/runner/work/uri-snapshot/uri-snapshot/index.mjs'
+
+          const results = await snapshot({
+            targets: [
+              { id: 'example', url: 'https://example.com' },
+              { id: 'repo',    url: 'https://github.com/todie/uri-snapshot' },
+            ],
+            outDir: '/tmp/uri-snapshot-test',
+            format: 'jpeg',
+            quality: 80,
+            viewport: { width: 1200, height: 630 },
+            timeout: 15000,
+            onProgress: (r) => {
+              const icon = r.status === 'ok' ? '\u2713' : '\u2717'
+              console.log(`${icon} ${r.id} (${r.durationMs}ms)${r.status === 'error' ? ': ' + r.error : ''}`)
+            },
+          })
+
+          const failed = results.filter(r => r.status === 'error')
+          if (failed.length > 0) {
+            console.error('Failed:', failed.map(r => r.id).join(', '))
+            process.exit(1)
+          }
+          console.log(`\nAll ${results.length} targets captured.`)
+          SCRIPT
+
+      - name: Smoke test — programmatic API
+        run: node /tmp/smoke.mjs
+
+      - name: Write CLI targets file
+        run: |
+          echo '[{"id":"cli-example","url":"https://example.com"}]' > /tmp/cli-targets.json
+
+      - name: Smoke test — CLI
+        run: node cli.mjs --targets /tmp/cli-targets.json --out /tmp/uri-snapshot-cli --format jpeg
+
+      - name: Verify outputs exist
+        run: |
+          ls -lh /tmp/uri-snapshot-test/
+          ls -lh /tmp/uri-snapshot-cli/
+          test -f /tmp/uri-snapshot-test/example.jpeg || (echo "Missing example.jpeg" && exit 1)
+          test -f /tmp/uri-snapshot-test/repo.jpeg    || (echo "Missing repo.jpeg" && exit 1)
+          test -f /tmp/uri-snapshot-cli/cli-example.jpeg || (echo "Missing cli-example.jpeg" && exit 1)
+          echo "All expected output files present."
