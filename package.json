@@ -1,0 +1,22 @@
+{
+  "name": "@todie/uri-snapshot",
+  "version": "0.1.0",
+  "description": "Playwright-based URI preview screenshot library for CI/CD pipelines",
+  "type": "module",
+  "main": "index.mjs",
+  "bin": {
+    "uri-snapshot": "./cli.mjs"
+  },
+  "exports": {
+    ".": "./index.mjs"
+  },
+  "scripts": {
+    "test": "node --test test.mjs"
+  },
+  "keywords": ["screenshot", "preview", "playwright", "cicd", "og-image"],
+  "author": "todie",
+  "license": "MIT",
+  "dependencies": {
+    "playwright": "^1.52.0"
+  }
+}
